@@ -1,0 +1,29 @@
+---
+title: "Ordination"
+author: "Ian Matthews"
+format: html
+editor: visual
+---
+
+## Introduction
+
+Exploration of data is often required in datasets with lots of variables, observations, or both. The principal way I undertake this is multivariate exploratory data analysis. I use this approach to understand the major changes within a dataset but also for dimension reduction to help build better models of change. The rescaling of data along the line of maximum variation captures the most variance while reducing the total number of variables to examine. This approach can often also help us to better understand the links between observations and variables by plotting ordination scatter plots.
+
+In this session I will cover 4 approaches to multivariate analysis. The first three are classical ordination approach using Principal components analysis (PCA), Correspondence analysis (CA), and its detrended version (DCA). Last, I will highlight the potential of Discriminant analysis used to classify unknown examples into larger groups. This last form is a very basic version of machine learning where a training set is used to establish a model which is then applied to unknown cases.
+
+## Tidy data
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
