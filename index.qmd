@@ -1,26 +1,30 @@
 ---
-title: "Ordination for Palaeoecology"
+title: "Quantified Palaeoecology - Rates of Change and Ordination"
 author: "Ian Matthews"
-format: html
+format: 
+  html:
+    toc: true
+    toc-location: right
+    self-contained: true
 editor: visual
 bibliography: references.bib
 ---
 
 ## Introduction
 
-Exploration of data is often required in datasets with lots of variables, observations, or both. The principal way I undertake this is multivariate exploratory data analysis. I use this approach to understand the major changes within a dataset but also for dimension reduction to help build better models of change. The rescaling of data along the line of maximum variation captures the most variance while reducing the total number of variables to examine. This approach can often also help us to better understand the links between observations and variables by plotting ordination scatter plots.In this session I will cover 3 approaches to multivariate analysis. The first three are classical ordination approach using Principal components analysis (PCA), Correspondence analysis (CA), and its detrended version (DCA). Last, I will highlight the potential of direct ordination to explain how much variability can be attributed to specific climatic forcing of our species data.
+Exploration of data is often required in datasets with lots of variables, observations, or both. The principal way I undertake this is multivariate exploratory data analysis. I use this approach to understand the major changes within a dataset but also for dimension reduction to help build better models of change. The rescaling of data along the line of maximum variation captures the most variance while reducing the total number of variables to examine. This approach can often also help us to better understand the links between observations and variables by plotting ordination scatter plots.In this session, I will first cover data plotting and determining rates of change (RoC) in samples, then I will cover four approaches to multivariate analysis. The first three are classical ordination approach using Principal components analysis (PCA), Correspondence analysis (CA), and its detrended version (DCA). Last, I will highlight the potential of direct ordination to explain how much variability can be attributed to specific climatic forcing of our species data. The first parts will use pollen data while the last will utilise the Norwegian modern chironomid dataset.
 
 ## Tidy data
 
 The first concern when undertaking any multivariate analysis it that you require Tidy data. In these cases each observation is a row and each variable is a column. This ensures a rectangular data frame with no extraneous information.
 
-The data sets we will use today are from two sources. The first is a palaeoecological dataset from pollen grain counts collected from a sediment core taken out of a lake in Scotland (figure 1). We will plot the data and then use multivariate analysis to explore the relationships between taxa and observations (observations in this case are derived from sample depths going down into the sediment core and also going further back in time). This type of research is carried out to understand temporal changes in vegetative history on the landscape and ultimately help with long term landscape development and management. The second approach relates to direct ordination where environmental variables are used understand changes within assemblages. For this I will use a modern environmental data and midge (chironomidae) data set.
+The data sets we will use today are from two sources. The first is a palaeoecological dataset from pollen grain counts collected from a sediment core taken out of a lake in Scotland (figure 1). We will plot the data and then use RoC and multivariate analysis to explore the relationships between taxa and observations (observations in this case are derived from sample depths going down into the sediment core and also going further back in time). This type of research is carried out to understand temporal changes in vegetative history on the landscape and ultimately help with long term landscape development and management. The second approach relates to direct ordination where environmental variables are used understand changes within assemblages. For this I will use a modern environmental data and midge (chironomidae) data set.
 
 ![Loch Garten and Abernethy Forest, Scotland, first worked on by [@birks1970; @birks1978; @matthews2011].](Loch-Garten-30th-Sept-REAF.jpg){fig-alt="An aerial view of Abernethy Forest" fig-align="center"}
 
 To do this we require a series of packages to be loaded. I tend to do these first in order to be consistent with my work.
 
-```{r echo=FALSE}
+```{r echo=TRUE, warning=FALSE}
 library(rioja) # plotting pollen data
 library(analogue) # Used for modern analogue testing
 library(readr) # loading .csv files
@@ -33,7 +37,7 @@ library(ggrepel) # better labels on ggplots
 library(ggdensity) # highest denisty regions geom.
 library(patchwork)# stacking plots together
 library(ggpubr) # Publication ready plots in ggplot
-library(ggvegan)
+
 ```
 
 First we load in the Abernethy Forest pollen data. We then view it to check that it has loaded correctly.
@@ -48,10 +52,13 @@ poll <- read_csv("Abernethy.csv")
 head(poll)
 ```
 
-If you are using Quarto or Rmarkdown you may wish to produce a better looking table of your data. This is particularly true if you wish to present material on slides. I use the gt package for this. displayed).
+If you are using Quarto or Rmarkdown you may wish to produce a better looking table of your data. This is particularly true if you wish to present material on slides. I use the gt package for this.
 
 ```{r warning=FALSE}
-poll %>% round(digits = 2) %>% gt(poll) # this rounds our data.frame to two decimal places and then produces a table of the data.
+poll %>% 
+  round(digits = 2) %>% 
+  gt()
+ # this rounds our data.frame to two decimal places and then produces a table of the data.
 ```
 
 Tables aren't great for data visualisation so we will plot the information in a stratigraphic chart. However, before we can do this we need to reduce our data so that only the most important taxa are displayed in a summary figure.
@@ -64,7 +71,7 @@ poll2 <- poll2[ -c(1)]
 # Use apply function to select poll the columns (taxa) by selecting 2 and maximum values 
 mx <- apply(poll2, 2, max)
 
-# Make new spec file using poll where mx is greater than 5 %  to remove rare taxa.
+# Make new spec file using poll where mx is greater than 3 %  to remove rare taxa.
 spec <- poll2[, mx >3]
 
 strat.plot(spec, scale.percent=TRUE, 
@@ -86,11 +93,10 @@ diss <- dist(sqrt(spec/100))
 clust <- chclust(diss, method="coniss")
 
 # broken stick model suggest n significant zones
-##windows(width=7, height=7)
 bstick(clust)
 ```
 
-This suggests that four different groups are viable in our data. We can add this information to our diagram and also tidy it up a little.
+This suggests that four or five different groups are viable in our data. We can add this information to our diagram and also tidy it up a little.
 
 ```{r}
 x <- strat.plot(spec, yvar = Depth, 
@@ -119,13 +125,70 @@ addClustZone(x, clust, 4, col="red") # zone number will change between sites
 
 ```
 
-While we have reduced and simplified our plots, we haven't really explored our data. We need to go beyond this and try to understand both the relationships between taxa (variables) and depths (observations). We can undertake ordination to achieve this. We have three main options for this, Correspondence analysis (CA), Detrended correspondence analysis (DCA - decorana), and Principal Components Analysis (PCA). There are a whole other suite of techniques we could explore, but these go beyond our needs in these data.
+While we have reduced and simplified our plots, we haven't really explored our data. The zonation picks out periods of change in the data but doesn't allow us to understand this in a clear dataset. We need to report rates of change, and then we need to go beyond this and try to understand both the relationships between taxa (variables) and depths (observations). We can undertake ordination to achieve this. We have three main options for this, Correspondence analysis (CA), Detrended correspondence analysis (DCA - decorana), and Principal Components Analysis (PCA). There are a whole other suite of techniques we could explore, but these go beyond our needs in these data.
+
+## Rate of Change (RoC)
+
+We will constrain the rate of change in the Abernethy data using a dissimilarity measure. This looks to see how far samples vary from each other. Ideally this is calculated against age so that change over time can be identified, as we do not have a sufficient chronology for this we can plot against depth as a proxy for time.
+
+First we will calculate dissimilarity using a Squared Chord Distance using the Hellinger method.
+
+```{r}
+distance_matrix <- as.matrix(vegdist(poll2, method = "hellinger", upper = TRUE, diag = FALSE))
+distances <- diag(distance_matrix[-1, -ncol(distance_matrix)]) ## this extracts the most important information between sample differences.
+```
+
+Now we will need to determine the dissimilarity against depth.
+
+```{r}
+# Compute depth intervals (differences in depth)
+depth_intervals <- diff(poll$Depth)
+
+# Compute rate of change
+rate_of_change <- distances / depth_intervals
+
+# Combine into a dataframe
+roc_df <- data.frame(
+  depth = Depth[-1],  # Associate rate of change with the second sample in each pair
+  RoC = rate_of_change
+)
+
+print(roc_df)
+
+```
+
+Last we will print this against depth to see where the biggest changes occur.
+
+```{r}
+ggplot(roc_df, aes(x = depth, y = RoC)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  labs(title = "Rate of Change in Fossil Pollen Data",
+       x = "Depth (cm)",
+       y = "Rate of Change")
+```
+
+This suggests three locations with the greatest RoC, these closely agree with the zone boundaries. The greatest zones of change occurs at the base of the record and we might find that adding a smooth line through the data will show longer term trends.
+
+```{r}
+ggplot(roc_df, aes(x = depth, y = RoC)) +
+  geom_line() +
+  geom_point() +
+  geom_smooth(span = 0.5) +
+  theme_minimal() +
+  labs(title = "Rate of Change in Fossil Pollen Data",
+       x = "Depth (cm)",
+       y = "Rate of Change")
+```
+
+This generates interesting results. The smooth shows highest RoC at the start of the record which declinestoward 480 cm. This trend is interrupted by higher values between 480 - 460 cm. This suggests that the onset of Windermere interstadial conditions and the onset of the Holocene lead to the greatest changes in vegetation assemblages.
 
 ## Linear techniques -
 
 ### PCA
 
-Ordination via PCA rescales our data utilising the line of maximum variation. It attempts to capture as much of the total variability found within a sample as possible.
+Ordination via PCA rescales our data utilising the line of maximum variation. It attempts to capture as much of the total variability found within a sample as possible. We will undertake this for the Abernethy data. To ensure the data are comparable we will first transform them through scaling and centering the data first. We will first look at the output and produce a scree plot to see how much variation can be captured by each axis.
 
 ```{r}
 #produce a PCA
@@ -136,6 +199,8 @@ summary(pcascores)
 fviz_eig(pcascores)
 ```
 
+Axis 1 captures 33.7% of the total variation, while axis 2 captures 17.9%. Both of these capture c. 51.58% of the toal variation in the data. This is good to know but it doesn't tell us which variables are most important. This requires a second plot including this information.
+
 ```{r}
 fviz_pca_var(pcascores, col.var = "contrib", # Color by contributions to the PC
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
@@ -144,6 +209,8 @@ fviz_pca_var(pcascores, col.var = "contrib", # Color by contributions to the PC
 
 ```
 
+This biplot shows the position of our variables. Those most closely aligned to axis 1 influence it most. The colours in this plot also show the total contribution (importance). In this case *Betula*, *Rumex* and *Artemisia* are important for axis one. as the arrows point in different directions it means that while *Betula* levels are high, *Artemisia* and *Rumex* are low and vice versa. Poaceae is important for axis 2.
+
 ```{r}
 fviz_pca_biplot(pcascores, repel = TRUE,
                 col.var = "#2E9FDF", # Variables color
@@ -151,9 +218,17 @@ fviz_pca_biplot(pcascores, repel = TRUE,
 )
 ```
 
+This plot shows the samples (observations) against the variables and show which taxa are present in those samples e.g. samples 1-11 have *Betula*, *Calluna*, *Corylus*, *Juniperus* in them. When all these plots are combined we can see axis one is driven by stable woody vegetation at low values \<0 and unstable herbaceous vegetation as higher values \>0
+
+However, the PCA has the issue surrounding monotone responses and doesn't relfect unimodal change.
+
 ## Unimodal techniques
 
+Technically these should be better for ecological data we will check this for our data and see whether it provides a better assessment of change.
+
 ### Correspondence analysis (CA)
+
+This technique might better reflect the changes but can be strongly influenced by the arch effect. Can can see this in the plot below.
 
 ```{r echo=FALSE}
 cca_out <- cca(spec)
@@ -169,7 +244,7 @@ These types of plot are not very friendly to view. Additionally CA can introduce
 
 ### Detrended Correspondence Analysis (DCA)
 
-This breaks our data into segments using linear regression and then 'flattens out' the data. It has some advantages in that the axis lengths become measures of standard deviation in the
+This breaks our data into segments using linear regression and then 'flattens out' the data. It has some advantages in that the axis lengths become measures of standard deviation in the data. The code below gives different information to a PCA and requires a bit more transformation to make sense of it.
 
 ```{r}
 ord <- decorana(spec, iweigh=0)
@@ -177,26 +252,30 @@ ord # print results to console
 
 ```
 
+We see axis lengths \> 1.5-2 which means significnat change in our assemblage, remember that axis length units are now standard deviations. The length means this is likely to be the appropriate technique to use. We can convert this data to show how much variation is being captured.
+
 ```{r}
 ord$evals # gives just the eigenvalue scores.
 tot.in<-chisq.test(spec/sum(spec))$statistic
 tot.in
 ```
 
+This give each axis against the total inertia (the sum of all the Eigenvalues). From this we can calculate a percentage figure.
+
 ```{r}
 percent.explained<-round((ord$evals/tot.in)*100,2)
 percent.explained
 ```
 
-So in this case 38.67% of the variation is captured by axis 1 and a further 16.75% of the variation is captured by axis 2. This means we can capture 55.42% of all variation in the dataset with a single plot. We can plot this using the basic plotting commands of R to see how exactly the data is spread. In the following plot the taxa = names and the samples = circles. However, these types of plot are not particularly friendly to view with lots of overplotting..
+So in this case 38.67% of the variation is captured by axis 1 and a further 16.75% of the variation is captured by axis 2. This means we can capture 55.42% of all variation in the dataset with a single plot. This is comparable to the PCA. We can plot this using the basic plotting commands of R to see how exactly the data is spread. In the following plot the taxa = names and the samples = circles. However, these types of plot are not particularly friendly to view with lots of overplotting..
 
 ```{r}
 plot(ord, choices=c(1,2), origin=TRUE,
      display=c("both"),
-     cex = 0.7)
+     cex = 0.5)
 ```
 
-An alternative is to use the popular plotting package ggplot2, but this requires some data manipulation. Note also the above plot is scales to maximise the spacing between both samples and species, the output of the DCA does not automatically undertake that scaling.
+An alternative is to use ggplot2, but this requires some data manipulation. Note also the above plot is scaled to maximise the spacing between both samples and species, the output of the DCA does not automatically undertake that scaling.
 
 ```{r}
 dca.samples <- as.data.frame(scores(ord,  display = "sites", choices = 1:3))
@@ -217,7 +296,7 @@ ggplot(data = dca.species, aes(x=DCA1, y=DCA2, label = rownames(dca.species))) +
   theme_minimal()
 ```
 
-This is much clearer, but we have lost some information on plotting of the taxa. It would be great if we could use colour in order to try and improve our understanding of what is going on here. We can do this by using the pollen zones already assigned and adding them to our samples data.frame.
+This is much clearer, but we have lost some information on plotting of the taxa. It would be great if we could use colour in order to try and improve our understanding of what is going on here. We can do this by using the pollen zones already assigned and adding them to our samples data.frame. We do this below by adding a new sample group vector to our data set and using this to determine colour and symbol.
 
 ```{r}
 sample_id <- dca.samples$Depth
@@ -233,7 +312,7 @@ dca.samples.group <- cbind(dca.samples, sample.group)
 head(dca.samples.group)
 ```
 
-The table shows us that the groups have been successfully allocated.
+The table shows us that the groups have been successfully allocated, now we can plot this.
 
 ```{r}
 ggplot(data = dca.species, aes(x=DCA1, y=DCA2, label = rownames(dca.species))) +
@@ -266,6 +345,8 @@ ggplot(data = dca.species,
   )+
   theme_minimal()
 ```
+
+This shows us that zone 1 and three have the most positive position and therefore most open ground taxa with zone four having the most tree and woddy shrub cover. Zone 2 is more variable.
 
 ```{r}
 p1 <- ggplot(dca.samples, aes(Depth, DCA1)) +
@@ -315,11 +396,11 @@ plot(procrustes(rda(spec_trans2), cca(spec)))
 
 ```
 
-There is no 'correct' choice, you need to think about what it means for your own data. However, here `rclr` changes the data the most. You should now be able to use linear approaches to your data (RDA and PCA).
+There is no 'correct' choice, you need to think about what it means for your own data. However, here `rclr` changes the data the most. You should now be able to use linear approaches to your data (RDA and PCA). The next few lines of code will perform PCA plots on the transformed data, with Hellinger first and then rclr. Look at these and compare them to the untransformed data you produced above.
 
 ```{r}
 pcascores_trans <- prcomp(spec_trans, scale. = TRUE, center = TRUE)
-summary(pcascores_trans)
+summary(pcascores_trans) ## hellinger transform applied
 
 
 fviz_eig(pcascores_trans)
@@ -332,9 +413,11 @@ fviz_pca_biplot(pcascores_trans, repel = TRUE,
                 col.ind = "#696969")  # Individuals color
 ```
 
+The Hellinger transform means 41.98% of all variation is captured in axis 1 with another 17.68% in axis 2. The most important variables are the same as in the untransformed data.
+
 ```{r}
 pcascores_trans2 <- prcomp(spec_trans2, scale. = TRUE, center = TRUE)
-summary(pcascores_trans2)
+summary(pcascores_trans2) # rclr method
 
 
 fviz_eig(pcascores_trans2)
@@ -348,9 +431,11 @@ fviz_pca_biplot(pcascores_trans2, repel = TRUE,
 
 ```
 
+The rclr method captures 27.67% variation in axis 1 and 17.51% in axis 2. The approach also reduces the importnance of tree cover relative to Poaceae, *Empetrum* and Cyperaceae. Applying your ecological knowledge is important here to know whether this is appropriate.
+
 To understand the impact of each of these transformations we can plot the axis one scores for each method to see what impact it might have.
 
-```{r fig.width=4, fig.height=6}
+```{r fig.width=6, fig.height=10}
 pca.samples <- as.data.frame(scores(pcascores,  display = "sites", choices = 1:3))
 ca.samples <- as.data.frame(scores(cca_out,  display = "sites", choices = 1:3))
 pca.sampleshel <- as.data.frame(scores(pcascores_trans,  display = "sites", choices = 1:3))
@@ -414,9 +499,11 @@ g5 <- ggplot(plt_out, aes(Depth, V6)) +
 g1/g2/g3/g4/g5
 ```
 
+The PCA(rclr) produces a result which looks unlike any of the other approaches and you will need to think about whether this is helpful. Conversly the Hellinger transformed PCA captures the most variation of any approach in axis one (nearly 42%), it seems an interesting combination of both PCA and DCA results and this might add credibility.
+
 ## Direct Ordination
 
-We will use a modern dataset for this direct ordination where we are trying to determine which environmental variables influence species abundances. We will use a Norwegian chironomidae dataset collected from lakes from Svalbard down to Southern Norway. The samples collected were the larval stage from within the lake. At each location modern environmental data were collected from those locations e.g. water quality, temperature etc... The objective is to try and to determine how species assemblages change with differing environmental conditions. For this we need two tidy data sheets. One ordered by site containing the species data and a second ordered by site including the environmental data. This work was originally published by @brooks2000.
+We will use a modern dataset for this direct ordination where we are trying to determine which environmental variables influence species abundances. We will use a Norwegian chironomidae dataset collected from lakes from Svalbard down to Southern Norway. The samples collected were the larval stage from within the lake. At each location modern environmental data were collected from those locations e.g. water quality, temperature etc... The objective is to try and to determine how species assemblages change with differing environmental conditions. For this we need two tidy data sheets. One ordered by site containing the species data and a second ordered by site including the environmental data. This work was originally published by @brooks2000. Ideally, the last stage would be to apply these trends to a palaeodataset, but this requires additional stages and checks on the data. We can perform this another time if you wish to know more about this.
 
 ```{r warning=FALSE}
 N_Chiros <- read_csv("NORQRAPC.csv", show_col_types = FALSE) # species data
@@ -428,8 +515,8 @@ N_chiros_trans <- sqrt(N_chiros_t/100) # standardise the counts
 
 NORENV_t <- NORENV_t [-c(1)] # lose site code
 
-gt(N_Chiros)
-gt(NORENV)
+gt(head(N_Chiros, 15))
+gt(head(NORENV, 15))
 
 ```
 
@@ -449,9 +536,15 @@ varExpl(CCA, pcent = TRUE) # extract the percentage explained by axis 1.
 
 Our environmental variables constrain 1.18 of a total inertia of 5.16 in the taxa (about 22.8% of the total variation has been captured by our variables, but it means a lot more has not been captured by these variables. We can plot the results using ggvegan to produce a nice plot, and other ggplot extensions exist for the output of vegan analyses. The plot below shows the sites, species and environmental variables. The longest most horizontal arrows relating to our line of maximum variation i.e. axis 1 are water temperature and July air temperature. The first relates to ambient conditions for the larvae while the second relates to air temperatures during the reproductive cycle.
 
-```{r}
+```{r eval=FALSE}
+install.packages("remotes")
+remotes::install_github("gavinsimpson/ggvegan")
+```
+
+```{r fig.width=6, fig.height=6}
 library(ggvegan)
-autoplot(CCA)
+autoplot(CCA,
+         legend.position = "bottom")
 ```
 
 Laboratory experiments showed that one of the most important things determining chironomid assemblages was the temperature of the air during the period of reproduction. We can test the cca just against July air temperature by specifying our preferred variable.
@@ -464,8 +557,9 @@ varExpl(CCA2, pcent = TRUE)
 
 In this case our single constrained variable explains 8.25 % of the total variation in the species dataset. Again we can plot this against just July temperatures and then see how the ordinations change using the procrustes approach.
 
-```{r}
-autoplot(CCA2)
+```{r fig.width=6, fig.height=6}
+autoplot(CCA2, 
+         legend.position = "bottom")
 ```
 
 ```{r}
@@ -474,12 +568,22 @@ plot(procrustes(cca(N_chiros_trans), CCA2))
 
 We can see one single lake is strongly impacted by this. This lake is a Svalbard example and may be influenced by other factors than temperature (nutrient availability).
 
-Ideally we should be attempting to identify meaningful /significant environmental variables rather than working on each in turn. We will choose a model by applying a stepwise algorithm assessed by AIC. It adds significant environmental variables until eventually generating the best model, which in this case is N_chiros_trans \~ \`July t\` + Depth + Cond + TOC + Alk. So July temperature, water depth, total organic carbon, and alkalinity are significant to our species assemblages. With these combined axis 1 of the cca constrains 8.5 % of the total variability. However, as July temperatures were able to capture 8.24% on its own it would suggest the impacts of the other factors are very slight.
+Ideally we should be attempting to identify meaningful /significant environmental variables rather than working on each in turn. We will choose a model by applying a stepwise algorithm assessed by AIC. It adds significant environmental variables until eventually generating the best model, which in this case is `N_chiros_trans ~ July t + Depth + Cond + TOC + Alk`. So July temperature, water depth, total organic carbon, and alkalinity are significant to our species assemblages. With these combined axis 1 of the cca constrains 8.5 % of the total variability. However, as July temperatures were able to capture 8.24% on its own it would suggest the impacts of the other factors are very slight.
 
 ```{r}
-mod0 <- cca(N_chiros_trans ~ 1, NORENV_t) # create the cca
-mod <- step(mod0, scope = formula(mod1), test = "perm") #produce a permuted model 
-autoplot(mod)
+mod0 <- cca(N_chiros_trans ~ 1, NORENV_t) # unconstrained
+mod0
+mod1 <- cca(N_chiros_trans ~ ., NORENV_t) # constrained with environmental variables.
+mod1
+```
+
+```{r}
+mod <- step(mod0, scope = formula(mod1), test = "perm") ## from all variables to entirely unconstrained.
+```
+
+```{r fig.width=6, fig.height=6}
+autoplot(mod, 
+         legend.position = "bottom")
 varExpl(mod, pcent = TRUE)
 ```
 
